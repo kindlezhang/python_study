@@ -1,0 +1,15 @@
+LLM
+transformer
+CNN
+RNN
+GNN
+DNN
+VGG
+ResNet
+GoogleNet
+LeNet
+UNet
+Yolo
+LNP
+CV
+LoRA微调
