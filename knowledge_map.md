@@ -18,6 +18,9 @@ SVM
 强化学习
 AI agent
 PCA
+知识蒸馏
+Rag
+
 
 
 anaconda：虚拟环境，pip/pip3，vscode
