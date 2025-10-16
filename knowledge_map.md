@@ -4,16 +4,11 @@ CNN
 RNN
 GNN
 DNN
-
-
-
-
+Diffusion
+KL散度
 UNet
-
 LNP
-
-LoRA微调
-
+LoRA微调 fine-tuning
 SVM
 xgBoost
 AI agent
@@ -27,9 +22,9 @@ optimizer: SGD adam
 自注意力机制
 多头注意力机制
 如噪声建模、标签平滑、对比学习，迁移学习，强化学习
-
 HOG 
 
+longchain + rag + transformer
 
 
 anaconda：虚拟环境，pip/pip3，vscode
@@ -47,4 +42,8 @@ anaconda：虚拟环境，pip/pip3，vscode
 #### ResNet
 #### Yolo
 
+# 
 
+## RAG 
+
+## LangChain FastAPI OpenAI 
