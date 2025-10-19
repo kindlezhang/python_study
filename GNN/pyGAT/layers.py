@@ -53,6 +53,7 @@ class GraphAttentionLayer(nn.Module):
         # '----------------------------------------------------' -> N times
         # 
         
+
         Wh_repeated_in_chunks = Wh.repeat_interleave(N, dim=0)  # 复制
         Wh_repeated_alternating = Wh.repeat(N, 1)
         # Wh_repeated_in_chunks.shape == Wh_repeated_alternating.shape == (N * N, out_features)
