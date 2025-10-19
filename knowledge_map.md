@@ -1,10 +1,10 @@
 LLM
-transformer
+transformer(bert gpt)
 CNN
 RNN
 GNN
 DNN
-Diffusion
+Diffusion 
 KL散度
 UNet
 LNP
@@ -23,8 +23,15 @@ optimizer: SGD adam
 多头注意力机制
 如噪声建模、标签平滑、对比学习，迁移学习，强化学习
 HOG 
+VIT blip lava clip lora llama3
+mamba
+albef
+LSTM
+GRU
 
-longchain + rag + transformer
+
+
+langchain + rag + transformer
 
 
 anaconda：虚拟环境，pip/pip3，vscode
@@ -42,8 +49,15 @@ anaconda：虚拟环境，pip/pip3，vscode
 #### ResNet
 #### Yolo
 
+
 # 
 
 ## RAG 
 
 ## LangChain FastAPI OpenAI 
+
+https://www.bilibili.com/video/BV1Vd4y1v77v/?spm_id_from=333.337.search-card.all.click&vd_source=d0753af9f821371d3796ab81dbd99640
+
+https://www.bilibili.com/video/BV1g47nzTEAY?spm_id_from=333.788.recommend_more_video.1&trackid=web_related_0.router-related-2206146-q9d4h.1760665135067.690&vd_source=d0753af9f821371d3796ab81dbd99640
+
+https://www.bilibili.com/video/BV16o5QzKEBw/?spm_id_from=333.1387.favlist.content.click

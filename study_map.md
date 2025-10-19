@@ -22,6 +22,12 @@
 
 ### 吴恩达
 
+### 李沐
+
+### 西瓜书
+
+### scikit learn
+
 ## deep learning
 
 ### 《deep learning from scratch》
@@ -33,3 +39,7 @@
 ### 李沐《动手学深度学习》
 
 ### 刘二大人《pytorch深度学习实践》
+
+## LLM
+
+### Huggingface
