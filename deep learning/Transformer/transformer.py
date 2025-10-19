@@ -9,7 +9,8 @@ class SelfAttention(nn.Module):
         self.softmax = nn.Softmax(dim = -1) # 讲得分转成概率分布，在最后一个维度进行
 
     def forward(self, Q, K, V, mask = None):
-        # x:batch, seq_len, d_model
+        # x:batch, seq_len, d_model kkkkk
+        
         # batch: 一次送到模型的句子个数，seq_len: 一个句子中的token数量， d_model:embedding向量的维度(一般512)
         # Q, query向量 维度： batch, heads 头数一般为8, seq_len_q 一般来自token数量，但也有例外比如cross attention, d_k
         # K, key向量 维度：batch, heads, seq_len_k, d_k
@@ -71,4 +72,3 @@ class MultiHeadAttention(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.1):
         super(). __init__()
-        
