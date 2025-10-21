@@ -49,7 +49,7 @@ def evaluate(dataCenter, ds, graphSage, classification, device, max_vali_f1, nam
 		for param in params:
 			param.requires_grad = True
 
-		torch.save(models, 'models/model_best_{}_ep{}_{:.4f}.torch'.format(name, cur_epoch, test_f1))
+		torch.save(models, './GNN/graphSAGE/models/model_best_{}_ep{}_{:.4f}.torch'.format(name, cur_epoch, test_f1))
 
 	for param in params:
 		param.requires_grad = True

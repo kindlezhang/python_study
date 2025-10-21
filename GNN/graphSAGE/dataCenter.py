@@ -20,30 +20,30 @@ class DataCenter(object):
 			node_map = {} # map node to Node_ID
 			label_map = {} # map label to Label_ID
 			with open(cora_content_file) as fp:
-				for i,line in enumerate(fp):
+				for i,line in enumerate(fp): # i是iterate,line是特征矩阵的对应行
 					info = line.strip().split()
-					feat_data.append([float(x) for x in info[1:-1]])
+					feat_data.append([float(x) for x in info[1:-1]]) # 不包含第一列的id和不包含最后一列的类别，左闭右开
 					node_map[info[0]] = i  # 节点的index
 					if not info[-1] in label_map:
 						label_map[info[-1]] = len(label_map)
 					labels.append(label_map[info[-1]])
-			feat_data = np.asarray(feat_data)
+			feat_data = np.asarray(feat_data) # 将输入转化为数组对象
 			labels = np.asarray(labels, dtype=np.int64)
 			
 			adj_lists = defaultdict(set)
 			with open(cora_cite_file) as fp:
 				for i,line in enumerate(fp):
 					info = line.strip().split()
-					assert len(info) == 2
+					assert len(info) == 2 # 断言语句
 					paper1 = node_map[info[0]]
 					paper2 = node_map[info[1]]
 					adj_lists[paper1].add(paper2)
 					adj_lists[paper2].add(paper1)
 
 			assert len(feat_data) == len(labels) == len(adj_lists)
-			test_indexs, val_indexs, train_indexs = self._split_data(feat_data.shape[0])  # 选择data中训练，验证，测试集
+			test_indexs, val_indexs, train_indexs = self._split_data(feat_data.shape[0])  # 2708个node,1433维度的feature # 选择data中训练，验证，测试集
 
-			setattr(self, dataSet+'_test', test_indexs)
+			setattr(self, dataSet+'_test', test_indexs) # setattr 给对象动态添加、修改或赋值属性。
 			setattr(self, dataSet+'_val', val_indexs)
 			setattr(self, dataSet+'_train', train_indexs)
 
@@ -98,7 +98,7 @@ class DataCenter(object):
 
 
 	def _split_data(self, num_nodes, test_split = 3, val_split = 6):
-		rand_indices = np.random.permutation(num_nodes)
+		rand_indices = np.random.permutation(num_nodes) # 生成一个长度为 num_nodes 的随机排列索引序列
 
 		test_size = num_nodes // test_split
 		val_size = num_nodes // val_split

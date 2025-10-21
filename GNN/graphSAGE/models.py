@@ -11,12 +11,14 @@ class Classification(nn.Module):
 		super(Classification, self).__init__()
 
 		#self.weight = nn.Parameter(torch.FloatTensor(emb_size, num_classes)) 最终的输出 (128, num_classes)
+		# 线性全连接层 
 		self.layer = nn.Sequential(
 								nn.Linear(emb_size, num_classes)	  
 								#nn.ReLU()
 							)
 		self.init_params()
 
+	# 判断参数是否是二维张量，如果是进行Xavier uniform初始化
 	def init_params(self):
 		for param in self.parameters():
 			if len(param.size()) == 2:
@@ -198,8 +200,11 @@ class SageLayer(nn.Module):
 
 
 		self.gcn = gcn
-		self.weight = nn.Parameter(torch.FloatTensor(out_size, self.input_size if self.gcn else 2 * self.input_size)) # 创建weight
 
+		# nn.Parameter 表示这是一个需要被优化器更新的参数， torch.FloatTensor(out_size, ...) 创建一个指定形状的浮点型张量作为权重矩阵
+		# 如果是GCN就不用concat，否则要concat（graphsage）
+		self.weight = nn.Parameter(torch.FloatTensor(out_size, self.input_size if self.gcn else 2 * self.input_size)) # 创建weight
+		
 		self.init_params()  # 初始化参数
 
 	def init_params(self):
@@ -227,7 +232,7 @@ class GraphSage(nn.Module):
 		self.input_size = input_size
 		self.out_size = out_size
 		self.num_layers = num_layers
-		self.gcn = gcn
+		self.gcn = gcn 
 		self.device = device
 		self.agg_func = agg_func
 
@@ -235,7 +240,7 @@ class GraphSage(nn.Module):
 		self.adj_lists = adj_lists  # 边的连接
 
 		for index in range(1, num_layers+1):
-			layer_size = out_size if index != 1 else input_size
+			layer_size = out_size if index != 1 else input_size  # 如果是第一层输入就是1433，如果是第二层输入就是128
 			setattr(self, 'sage_layer'+str(index), SageLayer(layer_size, out_size, gcn=self.gcn))
 
 	def forward(self, nodes_batch):
@@ -279,7 +284,7 @@ class GraphSage(nn.Module):
 		to_neighs = [self.adj_lists[int(node)] for node in nodes]    # self.adj_lists边矩阵，获取节点的邻居
 		if not num_sample is None:  # 对邻居节点进行采样，如果大于邻居数据，则进行采样
 			_sample = random.sample
-			samp_neighs = [_set(_sample(to_neigh, num_sample)) if len(to_neigh) >= num_sample else to_neigh for to_neigh in to_neighs]
+			samp_neighs = [_set(_sample(sorted(to_neigh), num_sample)) if len(to_neigh) >= num_sample else to_neigh for to_neigh in to_neighs]
 		else:
 			samp_neighs = to_neighs
 		samp_neighs = [samp_neigh | set([nodes[i]]) for i, samp_neigh in enumerate(samp_neighs)]  # 聚合本身节点和邻居节点
