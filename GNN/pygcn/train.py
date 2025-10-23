@@ -32,7 +32,7 @@ parser.add_argument('--dropout', type=float, default=0.5,
                     help='Dropout rate (1 - keep probability).')
 
 args = parser.parse_args() # 检查实际输入的命令行参数
-args.cuda = not args.no_cuda and torch.cuda.is_available() # 判断是否使用GPU    
+args.cuda = not args.no_cuda and torch.cuda.is_available() # 判断是否使用GPU
 print(args.cuda)
 print(os.getcwd())
 

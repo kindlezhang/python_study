@@ -128,26 +128,33 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 
 	models = [graphSage, classification]
 	params = []
+
 	for model in models:
+		# graphsage训练weight的参数，classification先训练weight，在训练bias
 		for param in model.parameters():
 			if param.requires_grad:
 				params.append(param)
+	
 
+	# 用收集到的参数列表创建一个 SGD 优化器，学习率设为 0.7。
 	optimizer = torch.optim.SGD(params, lr=0.7)
+	# 把所有参数的梯度清零，防止梯度累积。
 	optimizer.zero_grad()
+	# 有些自定义模型可能有自己的 zero_grad() 方法，这样可以确保所有模型的梯度都被清空。
 	for model in models:
 		model.zero_grad()
 
+	# 找出训练多少个batch
 	batches = math.ceil(len(train_nodes) / b_sz)
 
 	visited_nodes = set()
-	for index in range(batches):
+	for index in range(batches): 
 		nodes_batch = train_nodes[index*b_sz:(index+1)*b_sz]  # batch训练的节点
 
 		# extend nodes batch for unspervised learning
 		# no conflicts with supervised learning
 		#nodes_batch = np.asarray(list(unsupervised_loss.extend_nodes(nodes_batch, num_neg=num_neg)))
-		visited_nodes |= set(nodes_batch)
+		visited_nodes |= set(nodes_batch) # 并到左侧集合中
 
 		# get ground-truth for the nodes batch
 		labels_batch = labels[nodes_batch]
