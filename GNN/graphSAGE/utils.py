@@ -116,6 +116,7 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 	train_nodes = getattr(dataCenter, ds+'_train')
 	labels = getattr(dataCenter, ds+'_labels')
 
+	# 这里是采集负样本，由于我们使用的是supervise,所以这里无所谓 
 	if unsup_loss == 'margin':
 		num_neg = 6
 	elif unsup_loss == 'normal':
@@ -123,6 +124,7 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 	else:
 		print("unsup_loss can be only 'margin' or 'normal'.")
 		sys.exit(1)
+	
 
 	train_nodes = shuffle(train_nodes)
 
@@ -132,19 +134,31 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 	for model in models:
 		# graphsage训练weight的参数，classification先训练weight，在训练bias
 		for param in model.parameters():
-			if param.requires_grad:
+			if param.requires_grad: # 如果需要更新就加入list中
 				params.append(param)
+	# params[0].shape # 128, 2866
+	# params[1].shape # 128, 256
+	# params[2].shape # 7, 128
+	# params[3].shape # 7
 	
 
 	# 用收集到的参数列表创建一个 SGD 优化器，学习率设为 0.7。
 	optimizer = torch.optim.SGD(params, lr=0.7)
 	# 把所有参数的梯度清零，防止梯度累积。
 	optimizer.zero_grad()
+
 	# 有些自定义模型可能有自己的 zero_grad() 方法，这样可以确保所有模型的梯度都被清空。
-	for model in models:
+	# optimizer.zero_grad()       # 1. 梯度清零
+	# output = model(input)       # 2. 前向传播
+	# loss = loss_fn(output, target)   # 3. 损失计算
+	# loss.backward()             # 4. 反向传播，自动计算每个参数的梯度（param.grad 会累加）
+	# optimizer.step()            # 5. 用梯度更新参数
+
+	for model in models: # 这么写也行
 		model.zero_grad()
 
 	# 找出训练多少个batch
+	# 1355个，每个batch20个，一共68个batch
 	batches = math.ceil(len(train_nodes) / b_sz)
 
 	visited_nodes = set()
@@ -153,7 +167,7 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 
 		# extend nodes batch for unspervised learning
 		# no conflicts with supervised learning
-		#nodes_batch = np.asarray(list(unsupervised_loss.extend_nodes(nodes_batch, num_neg=num_neg)))
+		# nodes_batch = np.asarray(list(unsupervised_loss.extend_nodes(nodes_batch, num_neg=num_neg)))
 		visited_nodes |= set(nodes_batch) # 并到左侧集合中
 
 		# get ground-truth for the nodes batch
@@ -161,7 +175,7 @@ def apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, b_
 
 		# feed nodes batch to the graphSAGE
 		# returning the nodes embeddings。 得到GraphSAGE后的ebmedding向量
-		embs_batch = graphSage(nodes_batch)  # 跳到models的GraphSge
+		embs_batch = graphSage(nodes_batch)  # 跳到models的GraphSge，自动调用forward功能
 
 		if learn_method == 'sup':
 			# superivsed learning

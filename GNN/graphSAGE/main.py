@@ -54,12 +54,15 @@ if __name__ == '__main__':
 	# 初始化对象，层数为2， 特征维度是1433，隐藏的embedding层数是128，features，边的连接（还不是矩阵）， device，gcn， aggregate function是mean.
 	graphSage = GraphSage(config['setting.num_layers'], features.size(1), config['setting.hidden_emb_size'], features, getattr(dataCenter, ds+'_adj_lists'), device, gcn=args.gcn, agg_func=args.agg_func)
 	graphSage.to(device)
+	# 至此，我么此处的 graphSage 是通过 GraphSage 类实例化出来的神经网络模型对象
 
 	num_labels = len(set(getattr(dataCenter, ds+'_labels')))  # label的数量，将属性转化为集合
 	classification = Classification(config['setting.hidden_emb_size'], num_labels)
 	classification.to(device)
+	# 至此，我们此处的 classification 是通过Classification类实例化出来的分类器
 
 	unsupervised_loss = UnsupervisedLoss(getattr(dataCenter, ds+'_adj_lists'), getattr(dataCenter, ds+'_train'), device)
+	# 至此，我们此处的unsupervised_loss是通过nsupervisedLoss类实例化的一个损失
 
 	if args.learn_method == 'sup':
 		print('GraphSage with Supervised Learning')
@@ -67,11 +70,13 @@ if __name__ == '__main__':
 		print('GraphSage with Supervised Learning plus Net Unsupervised Learning')
 	else:
 		print('GraphSage with Net Unsupervised Learning')
+	# 例子中，使用的sup，有三种选择
 
 	for epoch in range(args.epochs):
 		print('----------------------EPOCH %d-----------------------' % epoch)
 		# 返回的是模型
-		# 参数是dataCenter, "cora", 两个sage层， 分类器，无监督损失， 20，normal，deivce, supervise method
+		# 参数是dataCenter, "cora", 两个sage层， 分类器，无监督损失， batch size，normal，deivce, supervise method
+		# 进入总的执行语句
 		graphSage, classification = apply_model(dataCenter, ds, graphSage, classification, unsupervised_loss, args.b_sz, args.unsup_loss, device, args.learn_method)
 		if (epoch+1) % 2 == 0 and args.learn_method == 'unsup':
 			classification, args.max_vali_f1 = train_classification(dataCenter, graphSage, classification, ds, device, args.max_vali_f1, args.name)

@@ -11,18 +11,21 @@ class Classification(nn.Module):
 		super(Classification, self).__init__()
 
 		#self.weight = nn.Parameter(torch.FloatTensor(emb_size, num_classes)) 最终的输出 (128, num_classes)
-		# 线性全连接层 
+		# sequential是一个容器类，方便我们把神经网络层组合起来
+		# 线性全连接层，bias = TRUE
 		self.layer = nn.Sequential(
-								nn.Linear(emb_size, num_classes)	  
+								nn.Linear(emb_size, num_classes)	  # 不需要手动nn.parameter
 								#nn.ReLU()
 							)
 		self.init_params()
 
 	# 判断参数是否是二维张量，如果是进行Xavier uniform初始化
+	# 此时有两个参数一个是w矩阵，一个是bias向量，w矩阵是二位张量
 	def init_params(self):
-		for param in self.parameters():
+		for param in self.parameters(): # 最终会递归返回模型中所有设置为 nn.Parameter 的权重张量
 			if len(param.size()) == 2:
 				nn.init.xavier_uniform_(param)
+		# print(param.shape) # 参数矩阵大小为7*128
 
 	def forward(self, embeds):
 		logists = torch.log_softmax(self.layer(embeds), 1)
@@ -204,8 +207,9 @@ class SageLayer(nn.Module):
 		# nn.Parameter 表示这是一个需要被优化器更新的参数， torch.FloatTensor(out_size, ...) 创建一个指定形状的浮点型张量作为权重矩阵
 		# 如果是GCN就不用concat，否则要concat（graphsage）
 		self.weight = nn.Parameter(torch.FloatTensor(out_size, self.input_size if self.gcn else 2 * self.input_size)) # 创建weight
-		
-		self.init_params()  # 初始化参数
+		# shape 是128*2866 
+
+		self.init_params()  # 初始化参数,sagelayer的参数只有self.weight
 
 	def init_params(self):
 		for param in self.parameters():
@@ -218,10 +222,11 @@ class SageLayer(nn.Module):
 		nodes	 -- list of nodes
 		"""
 		if not self.gcn:
-			combined = torch.cat([self_feats, aggregate_feats], dim=1)   # concat自己信息和邻居信息
+			combined = torch.cat([self_feats, aggregate_feats], dim=1)   # concat自己信息和邻居信息，在dim=1，也就是列方向上拼接
 		else:
 			combined = aggregate_feats
-		combined = F.relu(self.weight.mm(combined.t())).t()
+		# combined.shape是 84* （1433+1433）
+		combined = F.relu(self.weight.mm(combined.t())).t()  # combined.shape就是84*128
 		return combined
 
 class GraphSage(nn.Module):
@@ -252,25 +257,36 @@ class GraphSage(nn.Module):
 		nodes_batch_layers = [(lower_layer_nodes,)]  # 第一次放入的节点，batch节点
 		# self.dc.logger.info('get_unique_neighs.')
 		for i in range(self.num_layers):  # 每层的Sage
-			lower_samp_neighs, lower_layer_nodes_dict, lower_layer_nodes= self._get_unique_neighs_list(lower_layer_nodes)  # 获得neighbors。 聚合自己和邻居节点，点的dict，涉及到的所有节点
+			# 注意这里涉及到的所有点变为了下一层的lower_layer_nodes
+			lower_samp_neighs, lower_layer_nodes_dict, lower_layer_nodes= self._get_unique_neighs_list(lower_layer_nodes)  # 获得neighbors。 聚合自己和邻居节点，点的dict，涉及到的所有节点 并将涉及到的所有节点作为参数进入下一个循环
 			nodes_batch_layers.insert(0, (lower_layer_nodes, lower_samp_neighs, lower_layer_nodes_dict))  # 聚合自己和邻居节点，点的dict，涉及到的所有节点
 			# insert,0 从最外层开始聚合
 		assert len(nodes_batch_layers) == self.num_layers + 1
+		# 即，经过两轮后，一个batch上的20个nodes，发展成了跟这20个nodes在两个步长上有关的所有nodes
+		# print(len(nodes_batch_layers[2][0])) # 最初20个
+		# print(len(nodes_batch_layers[1][0])) # 扩散到84个
+		# print(len(nodes_batch_layers[0][0])) # 最后300个
 
-		pre_hidden_embs = self.raw_features
-		for index in range(1, self.num_layers+1):
+		# 将最底层（第0层）的节点输入特征赋值给预备的“嵌入（embedding）”变量
+		pre_hidden_embs = self.raw_features # shape 是2708 * 1433， 2708个节点，self就是这个graphsage对象，它的rawfeatures就是feature矩阵
+		for index in range(1, self.num_layers+1): # 左闭右开 1~2
 			nb = nodes_batch_layers[index][0]   # 聚合自己和周围的节点
 			pre_neighs = nodes_batch_layers[index-1]  # 这层节点的上层邻居的所有信息。聚合自己和邻居节点，点的dict，涉及到的所有节点
 			# self.dc.logger.info('aggregate_feats.') aggrefate_feats=>输出GraphSAGE聚合后的信息
 			aggregate_feats = self.aggregate(nb, pre_hidden_embs, pre_neighs)  # 聚合函数。nb-这一层的节点， pre_hidden_embs-feature，pre_neighs-上一层节点
+			# print(aggregate_feats.shape) # 84*1433的聚合了300个邻居特征的84个node的embed
 			sage_layer = getattr(self, 'sage_layer'+str(index))
+			# 提取出这个第一层graphsage对象
 			if index > 1:
 				nb = self._nodes_map(nb, pre_hidden_embs, pre_neighs)   # 第一层的batch节点，没有进行转换
 			# self.dc.logger.info('sage_layer.')
+			# 参数是84个node自己的特征阵和邻居的特征阵
+			# sage_layer加入参数进行forward操作
 			cur_hidden_embs = sage_layer(self_feats=pre_hidden_embs[nb],
 										aggregate_feats=aggregate_feats)  # 进入SageLayer。weight*concat(node,neighbors)
+			# 84*128
 			pre_hidden_embs = cur_hidden_embs
-
+			# 84 * 128
 		return pre_hidden_embs
 
 	def _nodes_map(self, nodes, hidden_embs, neighs):
@@ -281,16 +297,17 @@ class GraphSage(nn.Module):
 
 	def _get_unique_neighs_list(self, nodes, num_sample=10):
 		_set = set
-		to_neighs = [self.adj_lists[int(node)] for node in nodes]    # self.adj_lists边矩阵，获取节点的邻居
+		to_neighs = [self.adj_lists[int(node)] for node in nodes]    # self.adj_lists边矩阵（一个字典），获取batch中节点的邻居信息
 		if not num_sample is None:  # 对邻居节点进行采样，如果大于邻居数据，则进行采样
 			_sample = random.sample
+			# 如果每个节点的邻居数量大于num_sample,就随机抽取出num_sample，否则不用动
 			samp_neighs = [_set(_sample(sorted(to_neigh), num_sample)) if len(to_neigh) >= num_sample else to_neigh for to_neigh in to_neighs]
 		else:
 			samp_neighs = to_neighs
 		samp_neighs = [samp_neigh | set([nodes[i]]) for i, samp_neigh in enumerate(samp_neighs)]  # 聚合本身节点和邻居节点
 		_unique_nodes_list = list(set.union(*samp_neighs))  # 这个batch涉及到的所有节点
 		i = list(range(len(_unique_nodes_list)))
-		unique_nodes = dict(list(zip(_unique_nodes_list, i)))  # 字典编号
+		unique_nodes = dict(list(zip(_unique_nodes_list, i)))  # 字典编号，成对迭代器
 		return samp_neighs, unique_nodes, _unique_nodes_list   # 聚合自己和邻居节点，点的dict，涉及到的所有节点
 
 	def aggregate(self, nodes, pre_hidden_embs, pre_neighs, num_sample=10):
@@ -300,23 +317,25 @@ class GraphSage(nn.Module):
 		indicator = [(nodes[i] in samp_neighs[i]) for i in range(len(samp_neighs))]  # 都是True，因为上文中，将nodes加入到neighs中了
 		assert (False not in indicator)
 		if not self.gcn:
-			samp_neighs = [(samp_neighs[i]-set([nodes[i]])) for i in range(len(samp_neighs))]  # 在把中心节点去掉
+			samp_neighs = [(samp_neighs[i]-set([nodes[i]])) for i in range(len(samp_neighs))]  # 再把自己的节点去掉
 		# self.dc.logger.info('2')
 		if len(pre_hidden_embs) == len(unique_nodes):  # 如果涉及到所有节点，保留原矩阵。如果不涉及所有节点，保留部分矩阵。
-			embed_matrix = pre_hidden_embs
+			embed_matrix = pre_hidden_embs  
 		else:
 			embed_matrix = pre_hidden_embs[torch.LongTensor(unique_nodes_list)]
+		# print(embed_matrix.size()) # 300 * 1433 第一次只保留了相关的300个nodes
 		# self.dc.logger.info('3')  将对应到的边，构建邻接矩阵
 		mask = torch.zeros(len(samp_neighs), len(unique_nodes))   # 本层节点数量，涉及到上层节点数量
-		column_indices = [unique_nodes[n] for samp_neigh in samp_neighs for n in samp_neigh]  # 构建邻接矩阵
+		# print(mask.shape) # 84 * 300
+		column_indices = [unique_nodes[n] for samp_neigh in samp_neighs for n in samp_neigh]  # 构建邻接矩阵,返回每个点对应的index
 		row_indices = [i for i in range(len(samp_neighs)) for j in range(len(samp_neighs[i]))]
 		mask[row_indices, column_indices] = 1   # 加上上两个步骤，都是构建邻接矩阵;
 		# self.dc.logger.info('4')
-		# mask - 邻接矩阵
+		# mask - 邻接矩阵,表示了这84个node和300个前面的层的邻居的连接信息
 		if self.agg_func == 'MEAN':
-			num_neigh = mask.sum(1, keepdim=True)    # 按行求和，保持和输入一个维度
+			num_neigh = mask.sum(1, keepdim=True)    # 按行求和表示每个节点的邻居总数，保持和输入一个维度
 			mask = mask.div(num_neigh).to(embed_matrix.device)  # 归一化操作
-			aggregate_feats = mask.mm(embed_matrix)   # 矩阵相乘，相当于聚合周围邻接信息求和
+			aggregate_feats = mask.mm(embed_matrix)   # 矩阵相乘，相当于聚合周围邻接信息求和 84*300 %*% 300*1433 = 84*1433
 
 		elif self.agg_func == 'MAX':
 			# print(mask)
