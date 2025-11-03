@@ -35,6 +35,8 @@ langchain + rag + transformer
 
 
 anaconda：虚拟环境，pip/pip3，vscode
+git
+jupyter notebook
 
 # Compute Vision
 
